@@ -28,9 +28,15 @@ flowchart TD
 
 ```text
 amazon_lakehouse/
-├── raw      (Volumes → amazon_files)
+│
+├── raw
+│   └── Volumes
+│       └── amazon_files
+│
 ├── bronze
+│
 ├── silver
+│
 └── gold
 ```
 
@@ -81,18 +87,6 @@ The semi-structured `details` field is a key challenge: keys, value types, and n
 
 ---
 
-## Data Engineering Challenges
-
-1. Semi-structured JSONL source data
-2. Nested structures (arrays, objects)
-3. Dynamic product attributes in `details`
-4. Schema inference conflicts (duplicate fields in metadata)
-5. Large file sizes
-6. Data quality (nulls, duplicates, types)
-7. Modeling reviews + products for efficient queries
-
----
-
 ## Project Workflow
 
 ```text
@@ -119,18 +113,6 @@ The semi-structured `details` field is a key challenge: keys, value types, and n
 
 ---
 
-## Future Improvements
-
-Incremental ingestion, orchestration, automated data quality, monitoring, Delta optimization, schema evolution, CI/CD, more dashboards.
-
----
-
-## Why This Project?
-
-Demonstrates real-world data engineering: Lakehouse + Medallion architecture, semi-structured ingestion, PySpark / Spark SQL, Delta Lake, Unity Catalog, schema handling, data quality, modeling, and analytics — preserving the dataset's real complexity rather than using clean sample data.
-
----
-
 ## Dataset Citation
 
 Yupeng Hou, Jiacheng Li, Zhankui He, An Yan, Xiusi Chen, and Julian McAuley. **Bridging Language and Items for Retrieval and Recommendation.** arXiv preprint arXiv:2403.03952, 2024.
@@ -148,7 +130,7 @@ Yupeng Hou, Jiacheng Li, Zhankui He, An Yan, Xiusi Chen, and Julian McAuley. **B
 
 ## About
 
-**Biswajit Nahak** — B.Tech, Electronics & Telecommunication Engineering
+**Biswajit Nahak** 
 
-- GitHub: [Biswajitnahak2003](https://github.com/Biswajitnahak2003)
-- LinkedIn: [Biswajit Nahak](https://www.linkedin.com/in/biswajit-nahak/)
+- [GitHub](https://github.com/Biswajitnahak2003)
+- [LinkedIn](https://www.linkedin.com/in/biswajit-nahak/)
