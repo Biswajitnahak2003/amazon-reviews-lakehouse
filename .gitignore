@@ -1,0 +1,14 @@
+# Raw datasets
+*.json
+*.jsonl
+*.json.gz
+*.jsonl.gz
+*.csv
+*.parquet
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Databricks local files
+.databricks/
