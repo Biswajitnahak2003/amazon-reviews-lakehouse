@@ -1,12 +1,12 @@
 # Amazon Reviews Lakehouse
 
-An end-to-end Lakehouse pipeline built on **Databricks Free Edition**, **PySpark**, **Spark SQL**, **Delta Lake**, **Unity Catalog**, and the **Medallion Architecture**.
+An end-to-end Lakehouse pipeline on **Databricks Free Edition** using **PySpark**, **Delta Lake**, **Unity Catalog**, and the **Medallion Architecture** — processing Amazon Reviews'23 data through Bronze, Silver, and Gold layers for analytics in Databricks SQL.
 
 ---
 
 ## Project Overview
 
-Processes the **Video Games** domain from the **Amazon Reviews'23** dataset. Review records and product metadata flow through **Bronze → Silver → Gold** layers using PySpark and Spark SQL, producing Delta tables for analytics in Databricks SQL. Raw files are stored in a Unity Catalog Volume.
+This project processes the **Video Games** domain from the Amazon Reviews'23 dataset. Raw review records and product metadata are ingested into Delta tables, cleaned and standardized, then shaped into analytical datasets — all within Databricks using PySpark and Spark SQL.
 
 ---
 
@@ -22,6 +22,8 @@ flowchart TD
     E --> F["Databricks SQL"]
 ```
 
+Silver and Gold layers will be documented as they are built.
+
 ---
 
 ## Unity Catalog Structure
@@ -31,16 +33,22 @@ amazon_lakehouse/
 │
 ├── raw
 │   └── Volumes
-│       └── amazon_files
+│       └── amazon_files/
+│           ├── reviews/
+│           │   └── Video_Games.jsonl.gz
+│           └── metadata/
+│               └── meta_Video_Games.jsonl.gz
 │
-├── bronze
+├── bronze/
+│   ├── reviews                  (Delta)
+│   └── product_metadata_raw     (Delta)
 │
-├── silver
+├── silver/
 │
-└── gold
+└── gold/
 ```
 
-Raw source files live at `/Volumes/amazon_lakehouse/raw/amazon_files/` and are **not** stored in this repo.
+Raw `.gz` files live in Unity Catalog Volumes — Databricks' managed storage. No external cloud setup (S3, GCS) needed.
 
 ---
 
@@ -50,10 +58,6 @@ Raw source files live at `/Volumes/amazon_lakehouse/raw/amazon_files/` and are *
 amazon-reviews-lakehouse/
 ├── README.md
 ├── .gitignore
-│
-├── 00_data_profiling/
-│   ├── 00_data_profiling
-│   └── README.md
 │
 ├── bronze/
 │   ├── 01_bronze_ingestion
@@ -75,55 +79,25 @@ amazon-reviews-lakehouse/
 
 ---
 
-## Technology Stack
+## Project Workflow
 
-| Component | Technology |
-|---|---|
-| Data Platform | Databricks Free Edition |
-| Catalog / Storage | Unity Catalog + Volumes |
-| Processing | Apache Spark / PySpark |
-| Querying | Spark SQL |
-| Table Format | Delta Lake |
-| Source Format | JSONL / GZIP |
-| Architecture | Medallion |
-| Language | Python |
+```
+1. Download dataset from Amazon Reviews'23
+2. Upload to Unity Catalog Volume
+3. Bronze — ingest raw data into Delta tables
+4. Silver — clean, normalize, and validate
+5. Gold — build analytical datasets
+6. Analytics — query and dashboard in Databricks SQL
+```
 
 ---
 
 ## Dataset
 
-**Amazon Reviews'23** ([source](https://amazon-reviews-2023.github.io/)), restricted to the **Video Games** domain.
+**Amazon Reviews'23** ([source](https://amazon-reviews-2023.github.io/)), Video Games domain.
 
-- `reviews/Video_Games.jsonl.gz` — ratings, text, timestamps, users, helpful votes, verified purchase, nested `images`
-- `metadata/meta_Video_Games.jsonl.gz` — titles, categories, descriptions, prices, stores, and a flexible `details` object with product-specific, nested attributes
-
-The semi-structured `details` field is a key challenge: keys, value types, and nesting vary per product.
-
----
-
-## Project Workflow
-
-```text
-1. Download dataset
-2. Upload to Databricks Volume
-3. Profile source data
-4. Bronze ingestion
-5. Silver cleaning & transformation
-6. Gold analytical datasets
-7. Databricks SQL queries
-8. Analytics dashboard
-```
-
----
-
-## Project Status
-
-- **Phase 1 — Environment Setup** ✅ Catalog, schemas, volume, dataset upload, GitHub sync
-- **Phase 2 — Data Profiling** ✅ Schema inspected, nested structures identified, metadata schema issue found
-- **Phase 3 — Bronze Layer** ⏳ Ingest reviews + metadata, preserve `details`, write Delta tables
-- **Phase 4 — Silver Layer** ⏳ Clean reviews, normalize timestamps/columns, transform product attributes, DQ checks
-- **Phase 5 — Gold Layer** ⏳ Product performance, review & category analytics
-- **Phase 6 — Analytics** ⏳ Spark SQL queries, views, Databricks SQL dashboard
+- `Video_Games.jsonl.gz` — ratings, text, timestamps, users, helpful votes, verified purchase, nested `images`
+- `meta_Video_Games.jsonl.gz` — titles, categories, descriptions, prices, stores, and a flexible `details` object with product-specific nested attributes
 
 ---
 
@@ -142,7 +116,7 @@ The semi-structured `details` field is a key challenge: keys, value types, and n
 
 ## About
 
-**Biswajit Nahak** 
+**Biswajit Nahak**
 
 - [GitHub](https://github.com/Biswajitnahak2003)
 - [LinkedIn](https://www.linkedin.com/in/biswajit-nahak/)
