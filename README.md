@@ -50,13 +50,27 @@ Raw source files live at `/Volumes/amazon_lakehouse/raw/amazon_files/` and are *
 amazon-reviews-lakehouse/
 ├── README.md
 ├── .gitignore
-└── notebooks/
-    ├── 00_data_profiling
-    ├── 01_bronze_ingestion
-    ├── 02_silver_reviews
-    ├── 03_silver_products
-    ├── 04_gold_analytics
-    └── 05_data_quality
+│
+├── 00_data_profiling/
+│   ├── 00_data_profiling
+│   └── README.md
+│
+├── bronze/
+│   ├── 01_bronze_ingestion
+│   └── README.md
+│
+├── silver/
+│   ├── 02_silver_reviews
+│   ├── 03_silver_products
+│   └── README.md
+│
+├── gold/
+│   ├── 04_gold_analytics
+│   └── README.md
+│
+└── quality/
+    ├── 05_data_quality
+    └── README.md
 ```
 
 ---
