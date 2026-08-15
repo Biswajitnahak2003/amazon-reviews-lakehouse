@@ -115,8 +115,6 @@ The semi-structured `details` field is a key challenge: keys, value types, and n
 
 ## Dataset Citation
 
-Yupeng Hou, Jiacheng Li, Zhankui He, An Yan, Xiusi Chen, and Julian McAuley. **Bridging Language and Items for Retrieval and Recommendation.** arXiv preprint arXiv:2403.03952, 2024.
-
 ```bibtex
 @article{hou2024bridging,
   title={Bridging Language and Items for Retrieval and Recommendation},
