@@ -22,7 +22,7 @@ flowchart TD
     E --> F["Databricks SQL"]
 ```
 
-Silver and Gold layers will be documented as they are built.
+Gold layer will be documented as it is built.
 
 ---
 
@@ -44,6 +44,7 @@ amazon_lakehouse/
 │   └── product_metadata_raw     (Delta)
 │
 ├── silver/
+│   └── reviews                  (Delta)
 │
 └── gold/
 ```
