@@ -249,3 +249,48 @@ print(f"Match with deduped count: {verify_count == final_count}")
 
 print("\nSample of silver data:")
 display(silver_verify.limit(5))
+
+# COMMAND ----------
+
+reviews_images = bronze_reviews.select("images")
+num_images = reviews_images.count()
+print(f"Number of records with images: {num_images}")
+
+# COMMAND ----------
+
+num_reviews_images = reviews_images.filter(F.size(F.col("images")) > 0).count()
+num_reviews_1images = reviews_images.filter(F.size(F.col("images")) == 1).count()
+num_reviews_2images = reviews_images.filter(F.size(F.col("images")) == 2).count()
+num_reviews_3images = reviews_images.filter(F.size(F.col("images")) == 3).count()
+num_reviews_4images = reviews_images.filter(F.size(F.col("images")) == 4).count()
+num_reviews_5images = reviews_images.filter(F.size(F.col("images")) == 5).count()
+num_reviews_morethan5images = reviews_images.filter(F.size(F.col("images")) > 5).count()
+print(f"Number of records with images: {num_reviews_images},1 image: {num_reviews_1images},2 images: {num_reviews_2images},3 images: {num_reviews_3images},4 images: {num_reviews_4images},5 images: {num_reviews_5images},more than 5 images: {num_reviews_morethan5images}")
+
+# COMMAND ----------
+
+reviews_images = (bronze_reviews.select("user_id","images").filter(F.size(F.col("images")) > 0))
+display(reviews_images.limit(5))
+
+# COMMAND ----------
+
+reviews_images_exploded = reviews_images.select("user_id", F.explode("images").alias("images"))
+
+display(reviews_images_exploded.limit(15), truncate = False)
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col
+
+reviews_images_exploded_df = reviews_images_exploded.select(
+    "user_id",
+    col("images.attachment_type").alias("attachment_type"),
+    col("images.large_image_url").alias("large_image_url"),
+    col("images.medium_image_url").alias("medium_image_url"),
+    col("images.small_image_url").alias("small_image_url")
+)
+
+display(reviews_images_exploded_df.limit(15), truncate=False)
+
+# COMMAND ----------
+
