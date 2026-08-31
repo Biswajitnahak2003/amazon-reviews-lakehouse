@@ -44,7 +44,12 @@ amazon_lakehouse/
 │   └── product_metadata_raw     (Delta)
 │
 ├── silver/
-│   └── reviews                  (Delta)
+│   ├── reviews                  (Delta)
+│   ├── review_images             (Delta)
+│   ├── products                  (Delta)
+│   ├── product_images            (Delta)
+│   ├── product_videos            (Delta)
+│   └── product_details           (Delta)
 │
 └── gold/
 ```
@@ -65,8 +70,8 @@ amazon-reviews-lakehouse/
 │   └── README.md
 │
 ├── silver/
-│   ├── 02_silver_reviews
-│   ├── 03_silver_products
+│   ├── 02_silver_reviews.py
+│   ├── 03_silver_products.py
 │   └── README.md
 │
 ├── gold/
