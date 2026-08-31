@@ -9,29 +9,33 @@ The Silver layer cleans, validates, and deduplicates Bronze review and product d
 ## Architecture
 
 ```text
-        BRONZE                                    SILVER
-┌───────────────────────────┐   ┌──────────────────────────────────────┐
-│ bronze.reviews            │   │ REVIEW PIPELINE                      │
-│ (review attrs + images)  │──▶│                                      │
-└───────────────────────────┘   │ Preserve images → Parse timestamps   │
-                                │ → Validate → Normalize helpful_vote   │
-                                │ → Deduplicate → Generate review_id   │
-                                │    │                                 │
-                                │    ├──▶ silver.reviews               │
-                                │    └──▶ silver.review_images        │
-                                └──────────────────────────────────────┘
-
-┌───────────────────────────┐   ┌──────────────────────────────────────┐
-│ bronze.product_metadata_  │   │ PRODUCT PIPELINE                     │
-│ raw (raw_json product     │──▶│                                      │
-│  metadata)                │   │ Parse JSON → Drop bought_together    │
-└───────────────────────────┘   │ → Clean price → Validate parent_asin │
-                                │    │                                 │
-                                │    ├──▶ silver.products              │
-                                │    ├──▶ silver.product_images      │
-                                │    ├──▶ silver.product_videos       │
-                                │    └──▶ silver.product_details      │
-                                └──────────────────────────────────────┘
+                    BRONZE
+          ┌─────────────────────┐
+          │ bronze.reviews      │
+          │ bronze.product_     │
+          │   metadata_raw      │
+          └──────────┬──────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────┐
+│                      SILVER                      │
+│                                                  │
+│  ┌──────────────────┐   ┌──────────────────────┐ │
+│  │  REVIEWS          │   │  PRODUCTS            │ │
+│  │                   │   │                      │ │
+│  │ Handled schema    │   │ Handled schema       │ │
+│  │ Cast timestamp    │   │ Dropped null cols    │ │
+│  │ Validated         │   │ Cleaned price        │ │
+│  │ Normalized vote   │   │ Handled nulls        │ │
+│  │ Deduplicated      │   │ Validated IDs        │ │
+│  │ Generated ID      │   │ Exploded arrays      │ │
+│  │                   │   │                      │ │
+│  │ ├── reviews       │   │ ├── products         │ │
+│  │ └── review_images │   │ ├── product_images   │ │
+│  │                   │   │ ├── product_videos   │ │
+│  │                   │   │ └── product_details  │ │
+│  └──────────────────┘   └──────────────────────┘ │
+└──────────────────────────────────────────────────┘
 ```
 
 ## Input
@@ -49,19 +53,19 @@ The Silver layer cleans, validates, and deduplicates Bronze review and product d
 
 The `images` column is carried through the pipeline (not dropped) so image records derive from the same deduplicated reviews later — this prevents re-reading Bronze after deduplication.
 
-### 2. Parse Timestamps
+### 2. Cast Timestamps
 
-Epoch milliseconds → `review_timestamp` (TIMESTAMP) + `review_date` (DATE) for both timestamp-level and date-based analysis.
+Epoch milliseconds → `review_timestamp` (TIMESTAMP) + `review_date` (DATE).
 
-### 3. Validate Review Columns
+### 3. Validate
 
 Profiling confirmed: no NULLs in selected fields, ratings 1-5 only, one negative `helpful_vote` found.
 
-### 4. Handle Negative `helpful_vote`
+### 4. Normalize `helpful_vote`
 
 A single `helpful_vote = -1` was normalized to `0`.
 
-### 5. Exact Duplicate Removal
+### 5. Deduplicate
 
 ```python
 reviews_deduped = reviews_working.dropDuplicates([
@@ -77,26 +81,17 @@ reviews_deduped = reviews_working.dropDuplicates([
 | After deduplication | 4,570,969 |
 | Duplicates removed | 53,646 |
 
-### 6. Generate Deterministic `review_id`
+### 6. Generate `review_id`
 
-SHA-256 hash of `asin + user_id + review_timestamp` — no duplicate combinations found, so the hash is safe as a unique identifier.
-
----
-
-## Review Image Processing
-
-Images are exploded **after** review deduplication to avoid reintroducing duplicates from Bronze. `posexplode` preserves each image's array position as `image_index`.
-
-- Reviews with images: 202,241
-- Data quality: No NULLs, no empty URLs, all HTTPS, `IMAGE` type only
+SHA-256 hash of `asin + user_id + review_timestamp` — no duplicate combinations found.
 
 ---
 
 ## Product Processing
 
-### 1. Define Schema and Parse
+### 1. Handle Schema
 
-An explicit `StructType` parses `raw_json` into a product struct, which is flattened into individual columns.
+An explicit `StructType` parses `raw_json` into a product struct, flattened into individual columns.
 
 ### 2. Drop `bought_together`
 
@@ -112,38 +107,89 @@ An explicit `StructType` parses `raw_json` into a product struct, which is flatt
 
 Original string preserved in `price_raw`. Result: $0-$3,499.99 range, 75,277 NULLs.
 
-### 4. Null Handling
+### 4. Handle Nulls
 
 `main_category` (11,035), `store` (4,361), and `title` (9) NULLs are **left as-is** — not replaced with invented values.
 
-### 5. Validate `parent_asin` Uniqueness
+### 5. Validate `parent_asin`
 
 0 duplicates across 137,269 products — no deduplication needed.
 
-### 6. Explode Images
+### 6. Explode Arrays
 
-`posexplode` on `images` array, filtering entries where all URL fields are NULL → **692,576 records**.
+Images: `posexplode` on `images`, filtering all-NULL entries → 692,576 records.
+Videos: `posexplode` on `videos`, filtering all-NULL entries → 145,608 records.
 
-### 7. Explode Videos
+---
 
-`posexplode` on `videos` array, filtering entries where both title and URL are NULL → **145,608 records**.
+## Some Important Details
 
-### 8. Extract Details
+### How Images Handled in Reviews
 
-The `details` field is a JSON object with varying keys per product. Values can be strings or nested objects. Parsing as `map<string, string>` auto-stringifies nested objects.
+Images are nested arrays in the source review data. Two key decisions shaped the approach:
 
-Products with empty `{}` details (3,422) excluded → **1,227,483 records**.
+1. **Preserve, don't drop** — The `images` column is carried through the entire review pipeline rather than being dropped early. This ensures image records are derived from the **same deduplicated review set**, preventing duplicate images from re-entering via a separate Bronze read.
 
-Example:
+2. **Explode after deduplication** — Images are exploded into `silver.review_images` only **after** review-level deduplication is complete. Using `posexplode` (not `explode`) preserves each image's original array position as `image_index`, giving a stable way to distinguish multiple images within the same review.
+
+```text
+reviews (deduplicated)
+  │
+  ├── image 0  →  row in silver.review_images (image_index=0)
+  ├── image 1  →  row in silver.review_images (image_index=1)
+  └── image 2  →  row in silver.review_images (image_index=2)
+```
+
+202,241 reviews contained images. Data quality checks confirmed: no NULLs, no empty URLs, all HTTPS, `IMAGE` attachment type only.
+
+### How Details Handled in Products
+
+The `details` field in the raw JSON is a JSON object with **varying keys per product** and **mixed value types**:
+
+- Some values are plain strings: `"Manufacturer": "Nintendo"`
+- Some values are nested objects: `"Best Sellers Rank": {"Video Games": 51019, "PlayStation 4 Games": 2886}`
+
+This makes it impossible to define a fixed schema. The solution:
+
+1. **Extract** the `details` field from `raw_json` using `get_json_object`
+2. **Parse** as `map<string, string>` — Spark automatically stringifies nested objects to their JSON string representation, so no data is lost
+3. **Explode** the map into key-value rows: `(parent_asin, detail_key, detail_value)`
+
+```python
+product_details = (
+    bronze_products
+    .select(
+        F.get_json_object("raw_json", "$.parent_asin").alias("parent_asin"),
+        F.get_json_object("raw_json", "$.details").alias("details_json")
+    )
+    .filter(F.col("details_json").isNotNull() & (F.col("details_json") != "{}"))
+    .withColumn("details_map", F.from_json(F.col("details_json"), "map<string, string>"))
+    .select("parent_asin", F.explode("details_map").alias("detail_key", "detail_value"))
+)
+```
+
+Products with empty `{}` details (3,422) excluded → 1,227,483 detail records. Validation confirmed 0 duplicate `(parent_asin, detail_key)` pairs.
+
+Example output:
 
 | parent_asin | detail_key | detail_value |
 |---|---|---|
 | B00069EVOG | Best Sellers Rank | `{"Video Games":137612,"PC-compatible Games":6707}` |
 | B00069EVOG | Manufacturer | Sierra |
+| B00069EVOG | Rated | Mature |
 
-### 9. Validate Detail Key Uniqueness
+### How Price Cleaned in Products
 
-0 duplicate `(parent_asin, detail_key)` pairs found.
+The source `price` column is a string with mixed formats. The cleaning logic handles three cases:
+
+| Source format | Handling |
+|---|---|
+| Plain number ("29.99") | Cast to double |
+| "from X.XX" | Extract number via regex |
+| Non-numeric text | Set to NULL |
+
+The original string is preserved in `price_raw` for traceability. After cleaning: $0-$3,499.99 range, 75,277 NULLs for products without a listed price.
+
 
 ---
 
