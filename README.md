@@ -22,8 +22,6 @@ flowchart TD
     E --> F["Databricks SQL"]
 ```
 
-Gold layer will be documented as it is built.
-
 ---
 
 ## Unity Catalog Structure
@@ -51,7 +49,13 @@ amazon_lakehouse/
 │   ├── product_videos            (Delta)
 │   └── product_details           (Delta)
 │
-└── gold/
+├── gold/
+│   ├── dim_product              (Delta)
+│   ├── dim_date                 (Delta)
+│   ├── fact_reviews              (Delta)
+│   ├── agg_product_ratings       (Delta)
+│   ├── agg_category_monthly      (Delta)
+│   └── agg_review_summary        (Delta)
 ```
 
 Raw `.gz` files live in Unity Catalog Volumes — Databricks' managed storage. No external cloud setup (S3, GCS) needed.
@@ -75,12 +79,8 @@ amazon-reviews-lakehouse/
 │   └── README.md
 │
 ├── gold/
-│   ├── 04_gold_analytics
+│   ├── 04_gold_analytics.py
 │   └── README.md
-│
-└── quality/
-    ├── 05_data_quality
-    └── README.md
 ```
 
 ---
